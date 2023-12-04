@@ -17,25 +17,24 @@ load("C:\\Users\\Warrick Scaife\\Desktop\\Data Science Project\\yelp_user_small.
 ### Project Overview
 
 This project aims to utilize reviews from the Yelp Dataset to predict stars associated with reviews. The key objectives include:
+-	Exploring the review and user data to identify relevant independent variables.
+-	Assessing the suitability of different models within the context of the project.
+-	Evaluating model performance using metrics such as accuracy and mean-squared error (MSE).
 
-- Exploring the review and user data to identify relevant independent variables.
-- Assessing the suitability of different models within the context of the project.
-- Evaluating model performance using metrics such as accuracy and variability.
-
-The project's conclusion is drawn based on the findings, and it determines that a random forest approach yields the best performance.
+The project’s conclusion is drawn based on the findings, and it determines that a random forest approach yields the best performance.
 
 ### Project Approach
-This project followed an Ad Hoc methodology which focuses on delivering a specific implementation without concern for broader impact or repeatable processes. The main reasons to not follow this methodology include non-scalability, high rework risk and difficulty in teams, however, due to the small one-off nature of this project these downsides were largely nullified. Consequently, the project benefited from a quick start and, drawing inspiration from agile methodologies, could be iteratively improved without adhering to a predefined methodology.
+
+This project followed an Ad Hoc methodology which focuses on delivering a specific implementation without concern for broader impact or repeatable processes. The main reasons to not follow this methodology include non-scalability, high rework risk and difficulty in teams, however, due to the small one-off nature of this project these downsides were largely nullified. Consequently, the project benefited from a quick start and, drawing inspiration from agile methodologies, it could be iteratively improved without adhering to a predefined methodology.
 
 ### Feature Selection
+
 In considering what independent variables to use, domain knowledge provided intuition. For example, variables such as ‘cool’, ‘funny’ and ‘useful’ are presumed to hold importance. We also explore other independent variables constructed from the data, the first of which is ‘average_business_stars’ which is the average stars given to a business across the reviews in the dataset, this follows the intuition that previous reviews of a given business are likely to provide good intuition on future reviews. On a similar note, we consider the variable ‘average_stars’ which considers the average stars given by a user across all their reviews, intuitively this will capture whether a given reviewer is naturally cynical or optimistic. Finally, through sentiment analysis, two more variables were created, ‘afinn_score’ and ‘bing_score’, these have been constructed by considering the sentiment of each informative word in a review and summing across the review, in the case of Bing, assigning each word either negative one or positive one, or in the case of Afinn, assigning each word values from negative five to positive five. Many variables were not considered within the user data set for two main reasons, significant lack of observations and no direct or attainable link to the stars of reviews. 
 
 ```{r,message=FALSE,warning=FALSE,include=FALSE}
 # Install and load necessary packages
 install.packages(c("tidyverse", "tidytext", "gutenbergr", "topicmodels", "textdata", 
                    "rpart", "tree","doParallel","text", "randomForest","corrplot"))
-
-install.packages("partykit")
 
 library(tidyverse)   # Data manipulation and visualization
 library(tidytext)     # Text analysis with tidy data principles
@@ -53,7 +52,6 @@ library(tm)           # Text mining
 library(randomForest) # Random Forest models
 library(doParallel)   # Create Hash Digests 
 library(corrplot)     # Visualise Correlation
-library(partykit)
 ```
 
 ```{r}
@@ -118,6 +116,7 @@ test_data <- review_data_final[test_indices, ]
 ```
 
 ### Exploratory Data Analysis
+
 Understanding the distribution of stars will provide intuition when evaluating models.
 
 ```{r}
@@ -138,8 +137,9 @@ ggplot(review_data_final, aes(x = factor(stars))) +
   )
 ```
 
-47% of reviews are five stars, this may introduce bias into our models through the fact that imbalanced classes might lead a model to be biased towards the majority class, as it seeks to minimise errors. This could result in the minority class being poorly predicted, an aspect later demonstrated. 
-We also want to consider whether our independent variables are statistically significant in predicting stars. To do this we consider two linear metrics, correlation and T-tests, and while these are both linear indicators, they nevertheless contribute insight to the project. 
+47% of reviews are five stars, this may introduce bias into our models through the fact that imbalanced classes might lead a model to be biased towards the majority class, as it seeks to minimise errors. This could result in the minority class being poorly predicted, an aspect later demonstrated.
+
+We also want to consider whether our independent variables are statistically significant in predicting stars. To do this we consider two metrics, correlation and statistical significance, and while these are both linear indicators, they nevertheless contribute insight to the project. 
 
 ```{r}
 #Establishing the relevance of variables
@@ -149,9 +149,11 @@ cor_matrix <- cor(review_data_final[, c("cool", "funny", "useful", "average_busi
 corrplot(cor_matrix, method = "color", type = "upper", order = "hclust", tl.col = "black", tl.srt = 45)
 ```
 
-We can note that ‘useful’, ‘cool’ and ‘funny’ have very low correlation with the outcome variable, however are statistically significant. In contrast to all other variables which have moderate positive correlation and are all also statistically significant. 
-Notably, ‘cool’, ‘useful’ and ‘funny’ are all strongly correlated with each and therefore may have multicollinearity, similarly and intuitively ‘bing_score’ and ‘afinn_score’ are highly correlated as they are being generated from the same reviews. 
-A final point to note is that there is a large range in ‘afinn_score’ and ‘bing_score’, however after investigation, maintaining outliers produces a higher accuracy and therefore this is left as is. Additionally, the analysis indicated no relationship between review length and sentiment score. 
+We can note that ‘useful’, ‘cool’ and ‘funny’ have very low correlation with the outcome variable, however are statistically significant. In contrast to all other variables which have moderate positive correlation and are all also statistically significant.
+
+Notably, ‘cool’, ‘useful’ and ‘funny’ are all strongly correlated with each and therefore may have multicollinearity, similarly and intuitively ‘bing_score’ and ‘afinn_score’ are highly correlated as they are being generated from the same reviews.
+
+A noteworthy point is the large range in ‘afinn_score’ and ‘bing_score’. Upon investigation, retaining outliers leads to higher accuracy. Additionally, the analysis indicated no relationship between review length and sentiment score.
 
 ```{r}
 # Create a new variable 'predictions' with constant value 5
@@ -223,8 +225,8 @@ stopCluster(cl)
 ```
 
 ### Model Selection and Analysis
-This section will analyse the exploration of different models, how they performed, identifying limitations and how barriers encountered were overcome. Before discussing model selection we must establish evaluation criteria. First, a straightforward measure called accuracy represents the proportion of correct predictions. Secondly, a more statistical measure, mean-squared error (MSE). An effective model will have high accuracy, indicating many correct predictions, and low MSE, signifying incorrect predictions are close to actual values. 
-A benchmark model which only predicts five stars.
+
+This section will analyse the exploration of different models, how they performed, identifying limitations and how barriers encountered were overcome. Before discussing model selection we must establish evaluation criteria. First, a straightforward measure called accuracy represents the proportion of correct predictions. Secondly, a more statistical measure MSE. An effective model will have high accuracy, indicating many correct predictions, and low MSE, signifying incorrect predictions are close to actual values. We include a benchmark model which only predicts five stars.
 
 #### Classification Trees
 
@@ -236,7 +238,7 @@ plot(tree_model, col = "black", lty = 1, lwd = 3, cex = 1.2, gap = 10)
 text(tree_model, pretty = 0, cex = 1, col="gray",font=2,bg="black",srt=0)
 ```
 
-While performance in both metrics has improved, MSE is still high. Additionally, branches having identical outcomes is a sign of the model overfitting the data, meaning that the model has captured noise or patterns from the training data which do not generalise to the test data. This may suggest that the model is too complex and requires pruning. 
+While performance in both metrics has improved compared to the benchmark, MSE is still high. Additionally, branches having identical outcomes is a sign of the model overfitting the data, meaning that the model has captured noise or patterns from the training data which do not generalise to the test data. This may suggest that the model is too complex and requires pruning. 
 
 Limiting the depth through pruning will help the issue of overfitting by removing branches that do not contribute significantly to improving the model's performance. 
 
@@ -246,23 +248,26 @@ plot(tree_model_pruned, col = "black", lty = 1, lwd = 3, cex = 1.2, gap = 10)
 text(tree_model_pruned, pretty = 0, cex = 1, col="gray",font=2,bg="black",srt=0)
 ```
 
-Demonstrated is the result of pruning at a low-cost complexity, which while it does improve the accuracy and MSE of the model, the issue of overfitting has not been solved, and the model has lost its interpretability. Increasing the cost complexity of the model has little effect as it merely reduces the performance and returns to the previous model.
+Demonstrated is the result of pruning at a low-cost complexity, which, while it does improve the performance of the model, the issue of overfitting has not been solved, and the model has lost its interpretability. Increasing the cost complexity of the model has little effect, merely reduces the performance and returning to the previous model.
 
-Both of these cases have illustrated the fact that classification trees are not robust, perturbations in the data have resulted in a big effect on the final tree and ultimately MSE. In this case, this is exacerbated through unbalanced classes. 
+Both of these cases have illustrated the fact that classification trees are not robust, imbalances in the data have resulted in a big effect on the final tree and ultimately MSE.
 
-#### Linear Models 
+#### Linear Models
+
 To overcome this issue we can consider a more restrictive linear model which is more robust to deviations in the data. 
 
 While this model does reduce the MSE, it suffers from a lower predictability. One way to stay in a linear realm whilst improving predictability is to consider a  spline model to introduce some flexibility and maintain low MSE.
 
-This model does further reduce MSE, however does not improve the predictability of the result. We now seek a model which maintains the low MSE of linear models whilst keeping high predictability.
+This model does further reduce MSE, however does not massively improve the accuracy. We now seek a model which maintains the low MSE of linear models whilst keeping high predictability.
 
-#### Random Forest 
-To increase predictability whilst maintaining a low MSE we return to a classification model, however, to reduce the bias introduced within the model, we employ a random forest methodology which reduces both variance and bias and ultimately reduces MSE.
+#### Random Forest
 
-Here we can see that random forest achieves the highest predictability, whilst maintaining a lower MSEs. This is because of the nature of random forests it overcomes the impact of imbalanced datasets. 
+To increase predictability whilst maintaining a low MSE we return to a classification model, however, to reduce the bias introduced within the model, we employ a random forest methodology which reduces variance, bias and ultimately MSE.
+
+From this analysis it is evident that random forest demonstrated superior predictability with MSE. This is attributed to the inherent characteristics of random forests, enabling them to overcome the challenges posed by the imbalanced dataset and multicollinearity. 
 
 #### Model Results
+
 | Model          | Accuracy | MSE  |
 |:--------------|:--------:|:---:|
 | Benchmark      |   47%    | 3.7 |
@@ -274,7 +279,8 @@ Here we can see that random forest achieves the highest predictability, whilst m
 
 ### Conclusion
 
-We have seen how the different models have a trade-off between variance, bias and accuracy through overfitting or underfitting the data. The distribution of the data has posed significant challenges to classification models, the categorical nature of stars posed challenges for continuous linear models but ultimately an approach which randomly selects predictors 
+We have seen how the different models have a trade-off between MSE and accuracy through overfitting or underfitting the data. The distribution of the data posed significant challenges to classification models and the categorical nature of stars posed challenges for continuous linear models. The optimal model was predictive, achieving high accuracy, and effectively managed overfitting by through bootstrapped samples. Additionally, it’s ability to handle imbalanced data contributed to its superior performance.  
+
 Further analysis into patterns or trends in specifications may indicate where model optimisations can be made. Additionally, increasing the size of validation data will provide more robust results, in combination with other validation methods. 
 
 ### Challenges
